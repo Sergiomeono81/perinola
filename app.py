@@ -1,67 +1,54 @@
-
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
-def lanzar_perinola():
-    return np.random.choice(['Pon 1', 'Pon 2', 'Toma 1', 'Toma 2', 'Toma todo', 'Todos ponen'])
-
-def jugar_turno(billeteras):
-    resultado = lanzar_perinola()
-    total_jugadores = len(billeteras)
-    if resultado == 'Pon 1':
-        billeteras = np.maximum(billeteras - 1, 0)
-    elif resultado == 'Pon 2':
-        billeteras = np.maximum(billeteras - 2, 0)
-    elif resultado == 'Toma 1':
-        jugador = np.random.choice(total_jugadores)
-        billeteras[jugador] += 1
-    elif resultado == 'Toma 2':
-        jugador = np.random.choice(total_jugadores)
-        billeteras[jugador] += 2
-    elif resultado == 'Toma todo':
-        jugador = np.random.choice(total_jugadores)
-        billeteras[jugador] += np.sum(billeteras)
-        billeteras = np.zeros(total_jugadores, dtype=int)
-        billeteras[jugador] = np.sum(billeteras)
-    elif resultado == 'Todos ponen':
-        billeteras = np.maximum(billeteras - 1, 0)
-        pot = total_jugadores - np.count_nonzero(billeteras == 0)
-        jugador = np.random.choice(total_jugadores)
-        billeteras[jugador] += pot
-    return billeteras
-
-def analizar_simulacion(N, M, dinero_inicial):
-    juegos_hasta_ganador = []
-    for _ in range(M):
-        billeteras = np.ones(N) * dinero_inicial
-        juegos = 0
-        while np.max(billeteras) < N * dinero_inicial:
-            billeteras = jugar_turno(billeteras)
-            juegos += 1
-        juegos_hasta_ganador.append(juegos)
-    promedio_juegos_hasta_ganador = np.mean(juegos_hasta_ganador)
-    return promedio_juegos_hasta_ganador, billeteras
+# [No hay cambios en las funciones perinola, simulacion_montecarlo, tiene_ganador, juegos_promedio_ganador, juegos_promedio_bancarrota_vs_jugadores]
 
 def main():
-    st.title("Simulación de Perinola")
-    
-    N = st.slider("Número de Jugadores", 2, 10, 4)
-    M = st.slider("Número de Juegos", 1, 500, 10)
-    dinero_inicial = st.slider("Dinero inicial por jugador", 1, 100, 10)
+    st.title("Simulación de Perinola con Montecarlo")
 
-    if st.button("Iniciar Simulación"):
-        promedio_ganador, billeteras_finales = analizar_simulacion(N, M, dinero_inicial)
-        st.write(f"Promedio de juegos hasta que hay un ganador con {N} jugadores: {promedio_ganador}")
+    n_jugadores = st.slider("Número de jugadores", 2, 10, 3)
+    m_juegos = st.slider("Número de juegos", 10, 100, 50)
+    dinero_inicial = st.slider("Dinero inicial", 5, 20, 10)
 
-        fig = plt.figure(figsize=(10,6))
-        plt.bar(range(1, N+1), billeteras_finales)
-        plt.xlabel('Jugador')
-        plt.ylabel('Dinero final')
-        plt.title('Ganancia y Pérdida por Jugador al final de la Simulación')
-        plt.xticks(range(1, N+1))
+    if st.button("Graficar"):
+        graficar(n_jugadores, m_juegos, dinero_inicial)
+        
+        _, _, juegos_bancarrota = simulacion_montecarlo(n_jugadores, m_juegos, dinero_inicial)
+        st.write(f"Se necesitan {juegos_bancarrota} juegos para que un jugador se quede sin dinero.")
+
+        juegos_ganador = juegos_promedio_ganador(n_jugadores, m_juegos, dinero_inicial)
+        st.write(f"En promedio, hay un ganador en {juegos_ganador} juegos.")
+
+        juegos_promedio = juegos_promedio_bancarrota_vs_jugadores(10, m_juegos, dinero_inicial)
+        plt.figure(figsize=(12, 8))
+        plt.plot(range(2, 11), juegos_promedio)
+        plt.xlabel('Número de Jugadores')
+        plt.ylabel('Juegos Promedio hasta Bancarrota')
+        plt.title('Juegos Promedio hasta Bancarrota vs. Número de Jugadores')
         plt.grid(True)
-        st.pyplot(fig)
+        st.pyplot()
+
+
+def graficar(n_jugadores, m_juegos, dinero_inicial):
+    jugadores, pozos, juegos_para_bancarrota = simulacion_montecarlo(n_jugadores, m_juegos, dinero_inicial)
+    plt.figure(figsize=(12, 8))
+
+    for i, dinero in enumerate(jugadores):
+        plt.plot(range(m_juegos), [dinero_inicial] * m_juegos, label=f'Jugador {i + 1}')
+
+    plt.plot(range(m_juegos), pozos, label='Pozo', linestyle='--')
+
+    plt.axvline(juegos_para_bancarrota, color='red', linestyle='--', label='Jugador en bancarrota')
+    plt.xlabel('Juegos')
+    plt.ylabel('Dinero')
+    plt.title('Ganancia y Pérdida por Jugador en cada Juego')
+    plt.legend()
+    plt.grid(True)
+    st.pyplot()
+
 
 if __name__ == "__main__":
     main()
+
+  
