@@ -1,13 +1,51 @@
 # Importa las bibliotecas necesarias
 import numpy as np
-import streamlit as st
 import matplotlib.pyplot as plt
+import streamlit as st
 
-# ... [Tus definiciones de función permanecen sin cambios]
+# Definiendo la función que simula la perinola
+def perinola():
+    opciones = ['Pon 1', 'Pon 2', 'Toma 1', 'Toma 2', 'Toma todo', 'Todos ponen']
+    return np.random.choice(opciones)
+
+# Definiendo la función que realiza la simulación Montecarlo
+def simulacion_montecarlo(n_jugadores, m_juegos, dinero_inicial):
+    jugadores = np.full(n_jugadores, dinero_inicial)
+    pozos = []
+    juegos_para_bancarrota = 0
+    
+    for juego in range(m_juegos):
+        pozo = 0
+        jugada = perinola()
+        if jugada == 'Pon 1':
+            jugadores = np.maximum(0, jugadores - 1)
+            pozo += n_jugadores
+        elif jugada == 'Pon 2':
+            jugadores = np.maximum(0, jugadores - 2)
+            pozo += 2 * n_jugadores
+        elif jugada == 'Toma 1':
+            jugador_elegido = np.random.randint(n_jugadores)
+            jugadores[jugador_elegido] += 1
+            pozo -= 1
+        elif jugada == 'Toma 2':
+            jugador_elegido = np.random.randint(n_jugadores)
+            jugadores[jugador_elegido] += 2
+            pozo -= 2
+        elif jugada == 'Toma todo':
+            jugador_elegido = np.random.randint(n_jugadores)
+            jugadores[jugador_elegido] += pozo
+            pozo = 0
+        elif jugada == 'Todos ponen':
+            jugadores = np.maximum(0, jugadores - 1)
+            pozo += n_jugadores
+            
+        pozos.append(pozo)
+        if juegos_para_bancarrota == 0 and np.min(jugadores) == 0:
+            juegos_para_bancarrota = juego + 1
+            
+    return jugadores, pozos, juegos_para_bancarrota
 
 def main():
-    st.title("Simulación Montecarlo de Perinola")
-    
     # Configura los widgets para la interactividad
     n_jugadores = st.slider("Número de jugadores", 2, 10, 3)
     m_juegos = st.slider("Número de juegos", 10, 100, 50)
@@ -15,40 +53,22 @@ def main():
     
     # Grafica la simulación
     jugadores, pozos, juegos_para_bancarrota = simulacion_montecarlo(n_jugadores, m_juegos, dinero_inicial)
-    fig, ax = plt.subplots(figsize=(12, 8))
+    plt.figure(figsize=(12, 8))
     
     for i, dinero in enumerate(jugadores):
-        ax.plot(range(m_juegos), [dinero_inicial] * m_juegos, label=f'Jugador {i + 1}')
-    ax.plot(range(m_juegos), pozos, label='Pozo', linestyle='--')
-    ax.axvline(juegos_para_bancarrota, color='red', linestyle='--', label='Jugador en bancarrota')
-    ax.set_xlabel('Juegos')
-    ax.set_ylabel('Dinero')
-    ax.set_title('Ganancia y Pérdida por Jugador en cada Juego')
-    ax.legend()
-    ax.grid(True)
+        plt.plot(np.full(m_juegos, dinero), label=f'Jugador {i + 1}')
+        
+    plt.plot(pozos, label='Pozo', linestyle='--')
     
-    st.pyplot(fig)
+    plt.axvline(juegos_para_bancarrota, color='red', linestyle='--', label='Jugador en bancarrota')
+    plt.xlabel('Juegos')
+    plt.ylabel('Dinero')
+    plt.title('Ganancia y Pérdida por Jugador en cada Juego')
+    plt.legend()
+    plt.grid(True)
     
-    # Responde a las preguntas
-    st.subheader("Análisis:")
-    
-    # 1. ¿Cuántos juegos son necesarios para que un jugador se quede sin dinero?
-    st.write(f"Se necesitan {juegos_bancarrota} juegos para que un jugador se quede sin dinero.")
+    st.pyplot(plt)
 
-    # 2. ¿En cuántos juegos en promedio hay un ganador?
-    juegos_ganador = juegos_promedio_ganador(n_jugadores, m_juegos, dinero_inicial)
-    st.write(f"En promedio, hay un ganador en {juegos_ganador} juegos.")
-
-    # 3. ¿Cómo afecta el número de jugadores al número de juegos para que un jugador se gane todo el dinero?
-    juegos_promedio = juegos_promedio_bancarrota_vs_jugadores(10, m_juegos, dinero_inicial)
-    fig, ax = plt.subplots(figsize=(12, 8))
-    ax.plot(range(2, 11), juegos_promedio)
-    ax.set_xlabel('Número de Jugadores')
-    ax.set_ylabel('Juegos Promedio hasta Bancarrota')
-    ax.set_title('Juegos Promedio hasta Bancarrota vs. Número de Jugadores')
-    ax.grid(True)
-    
-    st.pyplot(fig)
-
+# Ejecutar la función main() si se ejecuta el script
 if __name__ == "__main__":
     main()
